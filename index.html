@@ -186,7 +186,7 @@
 ================================================================ */
 const CONFIG = {
 
-  emailPesquisador: "seu_email@unicamp.br",
+  emailPesquisador: "ju3d@yahoo.com.br",
 
   // URL do App da Web (Apps Script) que grava as respostas direto numa
   // planilha Google. Deixe "" para usar apenas o download manual de CSV.
@@ -501,7 +501,7 @@ function trialA(){
     const txtEntendeu = document.getElementById("txtEntendeu").value.trim();
     if (!txtEntendeu){ mostrarAviso("Escreva o que você entendeu do vídeo antes de continuar."); return; }
     if (!respostaSelecionada){ mostrarAviso("Escolha uma das opções antes de continuar."); return; }
-    dados.respostas.push({
+    registrar({
       bloco: "A", ordem: idxA + 1, estimulo: item.codigo,
       resposta: respostaSelecionada,
       resposta_aberta: txtEntendeu,
@@ -531,7 +531,7 @@ function trialB(){
   document.getElementById("btnProx").addEventListener("click", () => {
     const txt = document.getElementById("txtResp").value.trim();
     if (!txt){ mostrarAviso("Escreva sua resposta antes de continuar."); return; }
-    dados.respostas.push({
+    registrar({
       bloco: "B", ordem: idxB + 1, estimulo: item.codigo,
       resposta: txt,
       tempo_ms: Math.round(performance.now() - tTrial)
@@ -576,7 +576,7 @@ function trialC(){
   document.getElementById("btnProx").addEventListener("click", () => {
     if (!respostaSelecionada){ mostrarAviso("Escolha um dos vídeos antes de continuar."); return; }
     const escolhido = (respostaSelecionada === "Vídeo 1") ? esq : dir;
-    dados.respostas.push({
+    registrar({
       bloco: "C", ordem: idxC + 1, estimulo: item.codigo,
       lado_video1: item.invertido ? item.video2.origem : item.video1.origem,
       lado_video2: item.invertido ? item.video1.origem : item.video2.origem,
@@ -596,7 +596,7 @@ function telaFinal(){
   <div class="cartao">
     <h2>Obrigado pela participação!</h2>
     <p class="forte" id="statusEnvio">${CONFIG.urlAppsScript
-      ? "Enviando suas respostas…"
+      ? "Conferindo o envio das suas respostas…"
       : "Falta só um passo: <strong>baixe o arquivo com suas respostas</strong> e envie para o pesquisador no e-mail abaixo. Sem esse envio, sua participação não pode ser registrada."}</p>
     <div class="resumo-final">
       Participante: ${dados.participante}<br>
@@ -608,17 +608,56 @@ function telaFinal(){
   </div>`;
   document.getElementById("btnCSV").addEventListener("click", baixarCSV);
   document.getElementById("btnJSON").addEventListener("click", baixarJSON);
-  if (CONFIG.urlAppsScript) enviarParaPlanilha();
+  if (CONFIG.urlAppsScript) enviarPendentes();
 }
 
-function enviarParaPlanilha(){
-  const st = document.getElementById("statusEnvio");
-  fetch(CONFIG.urlAppsScript, {
+/* ---------- envio incremental para a planilha ----------
+   Cada resposta é enviada assim que o participante clica em "Próximo".
+   Se o envio falhar (queda de rede), o registro fica marcado como pendente
+   e é reenviado na tela final. O download de CSV segue como plano B. ---- */
+
+function payloadDe(lista, parcial){
+  return JSON.stringify({
+    participante: dados.participante,
+    inicio: dados.inicio,
+    fim: dados.fim || "",
+    perfil: dados.perfil,
+    parcial: !!parcial,
+    respostas: lista
+  });
+}
+
+function postPlanilha(corpo){
+  return fetch(CONFIG.urlAppsScript, {
     method: "POST",
     mode: "no-cors",
+    keepalive: true,
     headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify(dados)
-  }).then(() => {
+    body: corpo
+  });
+}
+
+// registra a resposta em memória e já dispara o envio individual
+function registrar(reg){
+  reg.id = dados.participante + "-" + reg.bloco + String(reg.ordem).padStart(2, "0");
+  reg.enviado = false;
+  dados.respostas.push(reg);
+  if (!CONFIG.urlAppsScript) return;
+  postPlanilha(payloadDe([reg], true))
+    .then(() => { reg.enviado = true; })
+    .catch(() => { reg.enviado = false; });
+}
+
+// na tela final, reenvia o que por acaso não subiu
+function enviarPendentes(){
+  const st = document.getElementById("statusEnvio");
+  const pendentes = dados.respostas.filter(r => !r.enviado);
+  if (!pendentes.length){
+    st.innerHTML = "✔ Suas respostas foram enviadas. Se quiser, baixe uma cópia abaixo.";
+    return;
+  }
+  postPlanilha(payloadDe(pendentes, false)).then(() => {
+    pendentes.forEach(r => r.enviado = true);
     st.innerHTML = "✔ Suas respostas foram enviadas. Se quiser, baixe uma cópia abaixo.";
   }).catch(() => {
     st.innerHTML = "Não foi possível enviar automaticamente. Por favor, <strong>baixe o arquivo abaixo</strong> e envie para o e-mail do pesquisador.";
