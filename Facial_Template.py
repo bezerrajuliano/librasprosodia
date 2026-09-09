@@ -37,6 +37,105 @@ import math
 import numpy as np
 
 # ==========================================================================
+# RESOLVEDOR DE NOMES DE ACTION  (definitivo — aceita qualquer formato)
+# ==========================================================================
+# Converte QUALQUER nome de action no rotulo canonico "tema_tamanho_N",
+# com N = 1 afirmativa, 2 interrogativa, 3 negativa. Aceita:
+#   comida_curta_afirmacao / _afirmativa / _af / _1   (idem interrogativa,
+#   negativa, com ou sem acento, maiuscula ou espaco)
+#   juliano_07 / juliano_7  (legado: convertido pela posicao no corpus)
+#   qualquer chave ou valor presente no MAPA_ACTIONS do config
+# Copias sinteticas (sufixo _sint) sao ignoradas de proposito.
+import re as _re_mod
+import unicodedata as _ud
+
+_TIPOS = {
+    "1": "1", "af": "1", "afir": "1", "afirm": "1",
+    "afirmacao": "1", "afirmativa": "1", "afirmativo": "1", "afirmacoes": "1",
+    "2": "2", "int": "2", "interr": "2", "interrog": "2",
+    "interrogacao": "2", "interrogativa": "2", "interrogativo": "2",
+    "3": "3", "neg": "3", "negacao": "3", "negativa": "3", "negativo": "3",
+}
+_RE_LEGADO = _re_mod.compile(r"^juliano_?0*(\d+)$")
+
+
+def _norm(s):
+    s = _ud.normalize("NFKD", str(s))
+    s = "".join(c for c in s if not _ud.combining(c))
+    return s.lower().replace(" ", "_").replace("-", "_").strip("_ ")
+
+
+def canon_tipo_txt(t):
+    """'afirmacao', 'af', '1' -> '1'  (idem 2 e 3). None se nao reconhecer."""
+    return _TIPOS.get(_norm(t))
+
+
+def _parse_rotulo(nome, cfg):
+    partes = _norm(nome).split("_")
+    if len(partes) < 3:
+        return None
+    tipo = canon_tipo_txt(partes[-1])
+    if tipo is None:
+        return None
+    temas = [_norm(t) for t in cfg["ORDEM_TEMAS"]]
+    tams = [_norm(t) for t in cfg["TAMANHOS"]]
+    tam, tema = partes[-2], "_".join(partes[:-2])
+    if tema in temas and tam in tams:
+        return "{}_{}_{}".format(cfg["ORDEM_TEMAS"][temas.index(tema)],
+                                 cfg["TAMANHOS"][tams.index(tam)], tipo)
+    return None
+
+
+def rotulo_da_action(nome, cfg):
+    n = _norm(nome)
+    suf = _norm(cfg.get("TRANSF_SUFIXO_SLOT", "sint"))
+    if n.endswith("_" + suf):
+        return None
+    r = _parse_rotulo(n, cfg)
+    if r:
+        return r
+    for chave, rot in cfg.get("MAPA_ACTIONS", {}).items():
+        if _norm(chave) == n or _norm(rot) == n:
+            return _parse_rotulo(rot, cfg) or rot
+    m = _RE_LEGADO.match(n)
+    if m:
+        i = int(m.group(1)) - 1
+        temas, tams = cfg["ORDEM_TEMAS"], cfg["TAMANHOS"]
+        if 0 <= i < len(temas) * len(tams) * 3:
+            passo = len(tams) * 3
+            return "{}_{}_{}".format(temas[i // passo], tams[(i % passo) // 3], i % 3 + 1)
+    return None
+
+
+def indice_rotulos(cfg):
+    """{rotulo_canonico: action} varrendo todas as actions do .blend."""
+    idx = {}
+    for a in bpy.data.actions:
+        r = rotulo_da_action(a.name, cfg)
+        if r:
+            idx[r] = a
+    return idx
+
+
+def achar_action(nome):
+    if nome is None:
+        return None
+    act = bpy.data.actions.get(nome)
+    if act is not None:
+        return act
+    alvo = _norm(nome)
+    for a in bpy.data.actions:
+        if _norm(a.name) == alvo:
+            return a
+    return None
+
+
+
+
+
+
+
+# ==========================================================================
 # CONFIG PADRAO  (identico ao corporal — arquivo unico)
 # ==========================================================================
 CONFIG_PADRAO = {
@@ -45,7 +144,7 @@ CONFIG_PADRAO = {
     "TIPO_AF": "1",
     "TIPOS_ALVO": {"2": "int"},   # acrescente "3": "neg" na 2a fase
     "TAMANHOS": ["curta", "normal", "longa"],
-    "PADRAO_ACTION": "juliano_{:02d}",
+    "PADRAO_ACTION": "{}",
     "ORDEM_TEMAS": ["viagem", "comida", "estudo", "compra", "passeio",
                     "vestido", "livro", "cafe", "futebol"],
     "MAPA_ACTIONS": {},
@@ -93,12 +192,14 @@ def base_dir():
 
 
 def gerar_mapa(cfg):
+    """Mapa identidade: as actions do .blend usam o proprio rotulo
+    tema_tam_tipo (viagem_curta_1, ...)."""
     mapa = {}
-    tams, temas = cfg["TAMANHOS"], cfg["ORDEM_TEMAS"]
-    for n in range(1, len(temas) * 9 + 1):
-        i = n - 1
-        mapa[cfg["PADRAO_ACTION"].format(n)] = "{}_{}_{}".format(
-            temas[i // 9], tams[(i % 9) // 3], (i % 3) + 1)
+    for tema in cfg["ORDEM_TEMAS"]:
+        for tam in cfg["TAMANHOS"]:
+            for tipo in "123":
+                r = f"{tema}_{tam}_{tipo}"
+                mapa[r] = r
     return mapa
 
 
@@ -300,7 +401,7 @@ def main():
 
     unidades = {}
     for act in bpy.data.actions:
-        rot = cfg["MAPA_ACTIONS"].get(act.name)
+        rot = rotulo_da_action(act.name, cfg)
         if not rot:
             continue
         u = parse_unidade(rot)
@@ -315,6 +416,11 @@ def main():
         print(f"  {act.name:12s} -> {rot:18s} frames {f0:.0f}-{f1:.0f}  CTRL {len(unidades[u])}")
 
     if not unidades:
+        print("\nDIAGNOSTICO — nenhuma action casou com o MAPA_ACTIONS.")
+        print("primeiras chaves do mapa:", list(cfg["MAPA_ACTIONS"])[:3])
+        print("actions no .blend (ate 20):")
+        for a in sorted(bpy.data.actions, key=lambda x: x.name)[:20]:
+            print("   ", a.name)
         raise RuntimeError("Nenhuma action mapeada. Confira MAPA_ACTIONS.")
 
     for tipo_alvo, nome_alvo in cfg["TIPOS_ALVO"].items():
