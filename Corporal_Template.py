@@ -1,6 +1,6 @@
 """
 ===========================================================================
- gerar_template_corporal.py  (v4 — corpus 9 temas, Blender 5.2, INT e NEG)
+ gerar_template_corporal.py  (v4.1 — corpus 9 temas, Blender 5.2, INT e NEG, split-half)
 ===========================================================================
 Le TODAS as actions juliano_NN do .blend (slot OBJECT = Rigify), identifica
 tema/tamanho/tipo pela POSICAO da action no corpus (tabela em
@@ -35,6 +35,105 @@ import json
 import csv
 import math
 import numpy as np
+
+# ==========================================================================
+# RESOLVEDOR DE NOMES DE ACTION  (definitivo — aceita qualquer formato)
+# ==========================================================================
+# Converte QUALQUER nome de action no rotulo canonico "tema_tamanho_N",
+# com N = 1 afirmativa, 2 interrogativa, 3 negativa. Aceita:
+#   comida_curta_afirmacao / _afirmativa / _af / _1   (idem interrogativa,
+#   negativa, com ou sem acento, maiuscula ou espaco)
+#   juliano_07 / juliano_7  (legado: convertido pela posicao no corpus)
+#   qualquer chave ou valor presente no MAPA_ACTIONS do config
+# Copias sinteticas (sufixo _sint) sao ignoradas de proposito.
+import re as _re_mod
+import unicodedata as _ud
+
+_TIPOS = {
+    "1": "1", "af": "1", "afir": "1", "afirm": "1",
+    "afirmacao": "1", "afirmativa": "1", "afirmativo": "1", "afirmacoes": "1",
+    "2": "2", "int": "2", "interr": "2", "interrog": "2",
+    "interrogacao": "2", "interrogativa": "2", "interrogativo": "2",
+    "3": "3", "neg": "3", "negacao": "3", "negativa": "3", "negativo": "3",
+}
+_RE_LEGADO = _re_mod.compile(r"^juliano_?0*(\d+)$")
+
+
+def _norm(s):
+    s = _ud.normalize("NFKD", str(s))
+    s = "".join(c for c in s if not _ud.combining(c))
+    return s.lower().replace(" ", "_").replace("-", "_").strip("_ ")
+
+
+def canon_tipo_txt(t):
+    """'afirmacao', 'af', '1' -> '1'  (idem 2 e 3). None se nao reconhecer."""
+    return _TIPOS.get(_norm(t))
+
+
+def _parse_rotulo(nome, cfg):
+    partes = _norm(nome).split("_")
+    if len(partes) < 3:
+        return None
+    tipo = canon_tipo_txt(partes[-1])
+    if tipo is None:
+        return None
+    temas = [_norm(t) for t in cfg["ORDEM_TEMAS"]]
+    tams = [_norm(t) for t in cfg["TAMANHOS"]]
+    tam, tema = partes[-2], "_".join(partes[:-2])
+    if tema in temas and tam in tams:
+        return "{}_{}_{}".format(cfg["ORDEM_TEMAS"][temas.index(tema)],
+                                 cfg["TAMANHOS"][tams.index(tam)], tipo)
+    return None
+
+
+def rotulo_da_action(nome, cfg):
+    n = _norm(nome)
+    suf = _norm(cfg.get("TRANSF_SUFIXO_SLOT", "sint"))
+    if n.endswith("_" + suf):
+        return None
+    r = _parse_rotulo(n, cfg)
+    if r:
+        return r
+    for chave, rot in cfg.get("MAPA_ACTIONS", {}).items():
+        if _norm(chave) == n or _norm(rot) == n:
+            return _parse_rotulo(rot, cfg) or rot
+    m = _RE_LEGADO.match(n)
+    if m:
+        i = int(m.group(1)) - 1
+        temas, tams = cfg["ORDEM_TEMAS"], cfg["TAMANHOS"]
+        if 0 <= i < len(temas) * len(tams) * 3:
+            passo = len(tams) * 3
+            return "{}_{}_{}".format(temas[i // passo], tams[(i % passo) // 3], i % 3 + 1)
+    return None
+
+
+def indice_rotulos(cfg):
+    """{rotulo_canonico: action} varrendo todas as actions do .blend."""
+    idx = {}
+    for a in bpy.data.actions:
+        r = rotulo_da_action(a.name, cfg)
+        if r:
+            idx[r] = a
+    return idx
+
+
+def achar_action(nome):
+    if nome is None:
+        return None
+    act = bpy.data.actions.get(nome)
+    if act is not None:
+        return act
+    alvo = _norm(nome)
+    for a in bpy.data.actions:
+        if _norm(a.name) == alvo:
+            return a
+    return None
+
+
+
+
+
+
 from mathutils import Quaternion, Euler
 
 # ==========================================================================
@@ -53,7 +152,7 @@ CONFIG_PADRAO = {
     #   tamanho  = TAMANHOS[((NN-1) % 9) // 3]
     #   tipo     = ((NN-1) % 3) + 1      (1 af, 2 int, 3 neg)
     # Se a ordem real for outra, edite MAPA_ACTIONS no JSON (tem prioridade).
-    "PADRAO_ACTION": "juliano_{:02d}",
+    "PADRAO_ACTION": "{}",
     "ORDEM_TEMAS": ["viagem", "comida", "estudo", "compra", "passeio",
                     "vestido", "livro", "cafe", "futebol"],
     "MAPA_ACTIONS": {},                          # preenchido na 1a execucao
@@ -61,6 +160,15 @@ CONFIG_PADRAO = {
     # -- Limiares unificados (corpo E face) ------------------------------------
     "CORR_MINIMA": 0.50,
     "DIRECIONAL_MIN": 0.80,
+    # Quais metricas funcionam como PORTAO de aprovacao. Opcoes:
+    #   "intra"  corr entre tamanhos do mesmo tema (frases lexicalmente
+    #            distintas -> mede variacao lexical, nao prosodia; so informativo)
+    #   "inter"  corr entre curvas medias dos temas
+    #   "split"  confiabilidade split-half: corr entre medias de duas metades
+    #            aleatorias dos pares (SPLIT_REPETICOES sorteios)
+    #   "dir"    consistencia direcional
+    "CRITERIOS_APROVACAO": ["inter", "split", "dir"],
+    "SPLIT_REPETICOES": 200,
 
     # -- Corpo -----------------------------------------------------------------
     "ARMATURE": "",                              # vazio = detectar
@@ -92,13 +200,14 @@ def base_dir():
 
 
 def gerar_mapa(cfg):
+    """Mapa identidade: as actions do .blend usam o proprio rotulo
+    tema_tam_tipo (viagem_curta_1, ...)."""
     mapa = {}
-    tams = cfg["TAMANHOS"]
-    temas = cfg["ORDEM_TEMAS"]
-    for n in range(1, len(temas) * 9 + 1):
-        i = n - 1
-        mapa[cfg["PADRAO_ACTION"].format(n)] = "{}_{}_{}".format(
-            temas[i // 9], tams[(i % 9) // 3], (i % 3) + 1)
+    for tema in cfg["ORDEM_TEMAS"]:
+        for tam in cfg["TAMANHOS"]:
+            for tipo in "123":
+                r = f"{tema}_{tam}_{tipo}"
+                mapa[r] = r
     return mapa
 
 
@@ -221,6 +330,20 @@ def pearson(a, b):
     return float((a * b).sum() / d) if d > 1e-12 else 0.0
 
 
+def split_half(curvas, n_rep, seed=0):
+    """Corr media entre as curvas-media de duas metades aleatorias dos pares."""
+    curvas = np.stack(curvas)
+    n = len(curvas)
+    if n < 4:
+        return float("nan")
+    rng = np.random.default_rng(seed)
+    vals = []
+    for _ in range(n_rep):
+        p = rng.permutation(n); h = n // 2
+        vals.append(pearson(curvas[p[:h]].mean(axis=0), curvas[p[h:]].mean(axis=0)))
+    return float(np.mean(vals))
+
+
 def media_pares(curvas):
     if len(curvas) < 2:
         return float("nan")
@@ -252,17 +375,21 @@ def avaliar_marcador(deltas, cfg):
 
     # direcional: fracao de pares cujo valor no pico medio tem o mesmo sinal
     concord = [np.sign(d[pico_idx, dom]) == sinal for d in deltas.values()]
+    corr_split = split_half([d[:, dom] for d in deltas.values()], cfg["SPLIT_REPETICOES"])
     direcional = float(np.mean(concord))
 
     pico_graus = float(np.degrees(np.abs(media[pico_idx, dom])))
     pico_medio_pares = float(np.degrees(np.mean(
         [np.abs(d[:, dom]).max() for d in deltas.values()])))
 
-    ok = (corr_intra >= cfg["CORR_MINIMA"] and corr_inter >= cfg["CORR_MINIMA"]
-          and direcional >= cfg["DIRECIONAL_MIN"]
-          and pico_graus >= cfg["CORPO_MIN_ANGULO_GRAUS"])
+    crit = cfg["CRITERIOS_APROVACAO"]
+    ok = pico_graus >= cfg["CORPO_MIN_ANGULO_GRAUS"]
+    if "intra" in crit: ok = ok and corr_intra >= cfg["CORR_MINIMA"]
+    if "inter" in crit: ok = ok and corr_inter >= cfg["CORR_MINIMA"]
+    if "split" in crit: ok = ok and corr_split >= cfg["CORR_MINIMA"]
+    if "dir"   in crit: ok = ok and direcional >= cfg["DIRECIONAL_MIN"]
     return dict(media=media, dom_eixo="XYZ"[dom], corr_intra=corr_intra,
-                corr_inter=corr_inter, direcional=direcional,
+                corr_inter=corr_inter, corr_split=corr_split, direcional=direcional,
                 pico_graus=pico_graus, pico_medio_pares=pico_medio_pares,
                 fase_pico=pico_idx / (len(media) - 1), n_pares=len(deltas),
                 aprovado=ok)
@@ -297,7 +424,7 @@ def main():
     # 1) coleta: unidade -> {bone: quats(N,4)}
     unidades = {}
     for act in bpy.data.actions:
-        rot = cfg["MAPA_ACTIONS"].get(act.name)
+        rot = rotulo_da_action(act.name, cfg)
         if not rot:
             continue
         u = parse_unidade(rot)
@@ -322,6 +449,11 @@ def main():
         print(f"  {act.name:12s} -> {rot:18s} frames {f0:.0f}-{f1:.0f}  bones {len(dados)}")
 
     if not unidades:
+        print("\nDIAGNOSTICO — nenhuma action casou com o MAPA_ACTIONS.")
+        print("primeiras chaves do mapa:", list(cfg["MAPA_ACTIONS"])[:3])
+        print("actions no .blend (ate 20):")
+        for a in sorted(bpy.data.actions, key=lambda x: x.name)[:20]:
+            print("   ", a.name)
         raise RuntimeError("Nenhuma action mapeada. Confira MAPA_ACTIONS no config.")
 
     # 2) para cada alvo (int / neg)
@@ -354,6 +486,7 @@ def main():
                               dom_eixo=m["dom_eixo"],
                               corr_intra=round(m["corr_intra"], 4),
                               corr_inter=round(m["corr_inter"], 4),
+                              corr_split=round(m["corr_split"], 4),
                               direcional=round(m["direcional"], 3),
                               pico_graus=round(m["pico_graus"], 3),
                               pico_medio_pares_graus=round(m["pico_medio_pares"], 3),
@@ -364,6 +497,7 @@ def main():
                     template.append(dict(alvo=nome_alvo, bone=bone, dom_eixo=m["dom_eixo"],
                                          corr_intra=round(m["corr_intra"], 4),
                                          corr_inter=round(m["corr_inter"], 4),
+                                         corr_split=round(m["corr_split"], 4),
                                          direcional=round(m["direcional"], 3),
                                          pico_graus=round(m["pico_graus"], 3),
                                          fase_idx=k, fase=round(fases[k], 4),
@@ -382,10 +516,10 @@ def main():
                 w.writeheader(); w.writerows(linhas)
             print("  gravado:", nome, f"({len(linhas)} linhas)")
 
-        print(f"\n  {'bone':18s} eixo  intra   inter   dir    pico(g)  fase  ok")
+        print(f"\n  {'bone':18s} eixo  intra   inter   split   dir    pico(g)  fase  ok")
         for r in stats:
             print(f"  {r['bone']:18s}  {r['dom_eixo']}   {r['corr_intra']:6.3f}  "
-                  f"{r['corr_inter']:6.3f}  {r['direcional']:4.2f}  {r['pico_graus']:7.2f}  "
+                  f"{r['corr_inter']:6.3f}  {r['corr_split']:6.3f}  {r['direcional']:4.2f}  {r['pico_graus']:7.2f}  "
                   f"{r['fase_pico']:4.2f}  {'*' if r['aprovado'] else ''}")
         print(f"  aprovados: {sum(r['aprovado'] for r in stats)} de {len(stats)}")
 
