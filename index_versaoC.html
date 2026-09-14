@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Avaliação Perceptual — Prosódia em Libras</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --fundo:#EDF0F4;
+    --superficie:#FFFFFF;
+    --tinta:#16202B;
+    --tinta-suave:#5A6675;
+    --linha:#D8DEE6;
+    --trilha-a:#0E7C86;   /* Bloco A — identificação */
+    --trilha-b:#B4690E;   /* Bloco B — inteligibilidade */
+    --trilha-c:#6D4FA1;   /* Bloco C — naturalidade */
+    --accent:var(--trilha-a);
+    --raio:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{font-size:16px}
+  body{
+    font-family:'IBM Plex Sans',system-ui,sans-serif;
+    background:var(--fundo);
+    color:var(--tinta);
+    min-height:100vh;
+    line-height:1.55;
+  }
+  .casca{max-width:860px;margin:0 auto;padding:20px 16px 64px}
+
+  /* ---- espinha de progresso (assinatura visual) ---- */
+  .espinha{
+    display:flex;gap:6px;margin:8px 0 22px;
+    height:8px;border-radius:99px;overflow:hidden;
+  }
+  .espinha .seg{flex:1;background:var(--linha);position:relative;border-radius:99px;overflow:hidden}
+  .espinha .seg i{position:absolute;inset:0;width:0%;transition:width .35s ease;border-radius:99px}
+  .espinha .seg.a i{background:var(--trilha-a)}
+  .espinha .seg.b i{background:var(--trilha-b)}
+  .espinha .seg.c i{background:var(--trilha-c)}
+
+  .cabecalho{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .cabecalho h1{
+    font-family:'Space Grotesk',sans-serif;font-weight:700;
+    font-size:1.15rem;letter-spacing:-.01em;
+  }
+  .etiqueta-bloco{
+    font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--accent);
+    border:1.5px solid var(--accent);border-radius:99px;padding:3px 12px;
+  }
+
+  .cartao{
+    background:var(--superficie);border:1px solid var(--linha);
+    border-radius:var(--raio);padding:26px 24px;margin-top:14px;
+    box-shadow:0 1px 2px rgba(22,32,43,.05);
+  }
+  .cartao h2{
+    font-family:'Space Grotesk',sans-serif;font-weight:700;
+    font-size:1.45rem;letter-spacing:-.015em;margin-bottom:10px;
+  }
+  .cartao h2 .num{color:var(--accent)}
+  .cartao p{color:var(--tinta-suave);margin-bottom:12px}
+  .cartao p.forte{color:var(--tinta)}
+
+  .tcle-texto{
+    max-height:300px;overflow-y:auto;border:1px solid var(--linha);
+    border-radius:10px;padding:16px;font-size:.92rem;color:var(--tinta);
+    background:#FBFCFD;margin:14px 0;
+  }
+  .tcle-texto p{color:var(--tinta);margin-bottom:10px}
+
+  .caixa-video{
+    position:relative;width:100%;aspect-ratio:16/9;
+    background:#0D141C;border-radius:10px;overflow:hidden;margin:14px 0;
+  }
+  .caixa-video iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+  .par-videos{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:640px){.par-videos{grid-template-columns:1fr}}
+  .rotulo-video{
+    font-family:'IBM Plex Mono',monospace;font-size:.78rem;letter-spacing:.06em;
+    color:var(--tinta-suave);margin-bottom:4px;display:block;
+  }
+
+  .opcoes{display:flex;flex-direction:column;gap:10px;margin:16px 0}
+  .opcoes.linha{flex-direction:row;flex-wrap:wrap}
+  .opcoes.linha .btn-opcao{flex:1;min-width:150px}
+  .btn-opcao{
+    font-family:'IBM Plex Sans',sans-serif;font-size:1.02rem;font-weight:500;
+    padding:15px 18px;border-radius:10px;border:1.5px solid var(--linha);
+    background:var(--superficie);color:var(--tinta);cursor:pointer;
+    text-align:center;transition:border-color .15s, background .15s;
+  }
+  .btn-opcao:hover{border-color:var(--accent)}
+  .btn-opcao:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+  .btn-opcao.marcado{
+    border-color:var(--accent);background:color-mix(in srgb, var(--accent) 9%, white);
+    font-weight:600;
+  }
+
+  input[type=text],input[type=number],textarea,select{
+    width:100%;font-family:'IBM Plex Sans',sans-serif;font-size:1rem;
+    padding:12px 14px;border:1.5px solid var(--linha);border-radius:10px;
+    background:var(--superficie);color:var(--tinta);
+  }
+  input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:1px}
+  textarea{resize:vertical;min-height:90px}
+  .campo{margin-bottom:16px}
+  .campo label{display:block;font-weight:600;font-size:.92rem;margin-bottom:6px}
+  .campo .dica{font-size:.82rem;color:var(--tinta-suave);margin-top:4px}
+
+  .caixa-aceite{
+    display:flex;gap:12px;align-items:flex-start;
+    border:1.5px solid var(--linha);border-radius:10px;padding:14px;margin:14px 0;
+  }
+  .caixa-aceite input{width:20px;height:20px;margin-top:2px;accent-color:var(--accent);flex-shrink:0}
+  .caixa-aceite span{font-size:.94rem}
+
+  .btn-principal{
+    font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.05rem;
+    width:100%;padding:15px;border:0;border-radius:10px;cursor:pointer;
+    background:var(--accent);color:#fff;letter-spacing:.01em;
+    transition:filter .15s;margin-top:6px;
+  }
+  .btn-principal:hover{filter:brightness(1.08)}
+  .btn-principal:focus-visible{outline:3px solid var(--tinta);outline-offset:2px}
+  .btn-principal:disabled{background:var(--linha);color:var(--tinta-suave);cursor:not-allowed}
+  .btn-secundario{
+    font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:.95rem;
+    width:100%;padding:13px;border:1.5px solid var(--tinta);border-radius:10px;
+    background:transparent;color:var(--tinta);cursor:pointer;margin-top:10px;
+  }
+
+  .contador{
+    font-family:'IBM Plex Mono',monospace;font-size:.78rem;
+    color:var(--tinta-suave);letter-spacing:.05em;
+  }
+  .aviso{
+    font-size:.88rem;color:#8A3B12;background:#FBEEE4;
+    border-radius:8px;padding:10px 14px;margin-top:10px;display:none;
+  }
+  .aviso.visivel{display:block}
+
+  .resumo-final{
+    font-family:'IBM Plex Mono',monospace;font-size:.85rem;
+    background:#FBFCFD;border:1px solid var(--linha);border-radius:10px;
+    padding:14px;margin:14px 0;
+  }
+  .escala{display:flex;gap:8px;margin:10px 0 4px}
+  .escala button{
+    flex:1;font-family:'IBM Plex Mono',monospace;font-size:1.05rem;font-weight:500;
+    padding:14px 0;border-radius:10px;border:1.5px solid var(--linha);
+    background:var(--superficie);color:var(--tinta);cursor:pointer;
+  }
+  .escala button:hover{border-color:var(--accent)}
+  .escala button.marcado{border-color:var(--accent);
+    background:color-mix(in srgb, var(--accent) 9%, white);font-weight:700}
+  .escala-pontas{display:flex;justify-content:space-between;
+    font-size:.8rem;color:var(--tinta-suave)}
+  .oculto{display:none !important}
+  @media (prefers-reduced-motion: reduce){
+    .espinha .seg i{transition:none}
+  }
+</style>
+</head>
+<body>
+<div class="casca">
+
+  <div class="cabecalho">
+    <h1>Avaliação de sentenças em Libras</h1>
+    <span class="etiqueta-bloco" id="etiquetaBloco">Início</span>
+  </div>
+
+  <div class="espinha" aria-hidden="true">
+    <div class="seg a"><i id="progA"></i></div>
+    <div class="seg b"><i id="progB"></i></div>
+    <div class="seg c"><i id="progC"></i></div>
+  </div>
+
+  <main id="palco"></main>
+</div>
+
+<script>
+/* ================================================================
+   CONFIGURAÇÃO — edite apenas esta seção
+   ================================================================
+   Como obter o ID de um vídeo no Google Drive:
+   1. Clique com o botão direito no arquivo > Compartilhar
+      > "Qualquer pessoa com o link" (Leitor).
+   2. Copie o link. Ele tem o formato:
+      https://drive.google.com/file/d/AQUI_FICA_O_ID/view?usp=sharing
+   3. Cole somente o ID no campo "drive" abaixo.
+   O campo "codigo" é o rótulo interno do estímulo (aparece só no CSV,
+   nunca para o participante). Use sua convenção: tema_tamanho_tipo.
+================================================================ */
+const CONFIG = {
+
+  emailPesquisador: "seu_email@unicamp.br",
+
+  // VERSÃO desta cópia do arquivo: "A", "B" ou "C".
+  // Cada versão aplica 24 frases (8 por condição) segundo um quadrado latino.
+  // A cada 3 participantes (um de cada versão) os 72 vídeos são cobertos.
+  versao: "C",
+
+  urlAppsScript: "https://script.google.com/macros/s/AKfycbxqAs_Ei-bOZFsbpIcWPsCytaS_Ilk9-jkaE6Tzdd46EiQoCtHQU7hw5rM7Iu_Sl7w9/exec",
+
+  tcleVideoDrive: "",
+
+  // 0 = aplicar todos os itens da versão. Use 3 para testar.
+  limiteVideos: 3,
+
+  modoTeste: true,
+  mostrarDownloads: true,
+
+  // Os 8 temas do corpus. Servem como alternativas da pergunta de conteúdo.
+  temas: ["cafe","comida","compra","estudo","futebol","livro","passeio","viagem"],
+
+  tamanhos: ["curta","normal","longa"],
+
+  // CATÁLOGO DOS 72 VÍDEOS
+  // tipo: "afirmativa" | "interrogativa" | "sintetizada"
+  // A condição "sintetizada" tem gabarito Interrogativa (é a hipótese testada).
+  catalogo: [
+    // --- cafe ---
+    { tema:"cafe", tamanho:"curta", tipo:"afirmativa", drive:"1IIRYWiyyOuZjMFUx-vE7MZrqqvEkA-TM" },
+    { tema:"cafe", tamanho:"curta", tipo:"interrogativa", drive:"1DMF57ocRSz0GKcvl0imPu1oIaT0JDrAR" },
+    { tema:"cafe", tamanho:"curta", tipo:"sintetizada", drive:"116jpc7Nr2mOuWEqrqnv3IRsPAjI34N8u" },
+    { tema:"cafe", tamanho:"normal", tipo:"afirmativa", drive:"1Px5jRg4s2sbTkJjzCH3pVqtu-Aun-SYi" },
+    { tema:"cafe", tamanho:"normal", tipo:"interrogativa", drive:"1dPjHf0KKCsCwjFWjuqBnfUQG2pMfNasW" },
+    { tema:"cafe", tamanho:"normal", tipo:"sintetizada", drive:"1y9hCD6pTvNklYzc92mJdOgOSHGBAyUvN" },
+    { tema:"cafe", tamanho:"longa", tipo:"afirmativa", drive:"1mk8zx9zQrkDyWNE9_5LFGdvD2WDPWr-V" },
+    { tema:"cafe", tamanho:"longa", tipo:"interrogativa", drive:"1SQcuN-ivSTKBp24oH_rbhE73Ikquktz7" },
+    { tema:"cafe", tamanho:"longa", tipo:"sintetizada", drive:"1B-kQB7qhe4603L5WGtcfKiOSMPp7Z7VT" },
+    // --- comida ---
+    { tema:"comida", tamanho:"curta", tipo:"afirmativa", drive:"1i-LyNM87M6qiFFVTicAeLcX7bHXL5TsJ" },
+    { tema:"comida", tamanho:"curta", tipo:"interrogativa", drive:"1DD1HrswzYoeo0ivt6eK5PVebcg_lad8O" },
+    { tema:"comida", tamanho:"curta", tipo:"sintetizada", drive:"1wrCfckht97magJTQ7y1YhTYt8-ES1M3v" },
+    { tema:"comida", tamanho:"normal", tipo:"afirmativa", drive:"1JLq-RtQt5lxoJxv0LSnRe-euVx0MNWQP" },
+    { tema:"comida", tamanho:"normal", tipo:"interrogativa", drive:"1ZxPsp4k7EE7HqLwRu1JBxBXJ9vxD-DeB" },
+    { tema:"comida", tamanho:"normal", tipo:"sintetizada", drive:"1yeceURVFHUKoR_mbc3c8vSAiGXZParaG" },
+    { tema:"comida", tamanho:"longa", tipo:"afirmativa", drive:"1vMUP9Fn_IcS8W6WIKxyZfJySiQWQUiKQ" },
+    { tema:"comida", tamanho:"longa", tipo:"interrogativa", drive:"1EuhE1n7g1jlNwpJP1fznAzDKoC9Fsyfu" },
+    { tema:"comida", tamanho:"longa", tipo:"sintetizada", drive:"1TlJCleLTAjIuZYY1q7rQdVTqiAjPrJEu" },
+    // --- compra ---
+    { tema:"compra", tamanho:"curta", tipo:"afirmativa", drive:"1IjfzacHrObH559iY-1hEjjqh-50-xE5C" },
+    { tema:"compra", tamanho:"curta", tipo:"interrogativa", drive:"1Ge4t9s0iTfUXxBVnU6PQfELe1jscbPpA" },
+    { tema:"compra", tamanho:"curta", tipo:"sintetizada", drive:"16b4jE8sXkNuhxYM-1weBd5LMgwJrIcZy" },
+    { tema:"compra", tamanho:"normal", tipo:"afirmativa", drive:"1Q3ag2m5zuo543fuGV3-JvQeBwpFo2l_m" },
+    { tema:"compra", tamanho:"normal", tipo:"interrogativa", drive:"1oM3RbV2iV4jR0TI8QQ49fUfOtVaRyPBA" },
+    { tema:"compra", tamanho:"normal", tipo:"sintetizada", drive:"10kBkIaiT9XP07-BmMFtPjba-WSPGWTcZ" },
+    { tema:"compra", tamanho:"longa", tipo:"afirmativa", drive:"1JiqU7bMwElyfbRaqCbCVJJNJ9PB6kACG" },
+    { tema:"compra", tamanho:"longa", tipo:"interrogativa", drive:"1UkJNFiYxTGrgeogjuIOUErh6FGd6Rbh1" },
+    { tema:"compra", tamanho:"longa", tipo:"sintetizada", drive:"1WunIcOSsCoQJPXc0IuWyt26m-rqgXKu-" },
+    // --- estudo ---
+    { tema:"estudo", tamanho:"curta", tipo:"afirmativa", drive:"1YprYrF-4wP4sqNTdBAivs3Mx3vFy8Szb" },
+    { tema:"estudo", tamanho:"curta", tipo:"interrogativa", drive:"15qwVRkxksZiNn7cmPFs2YYJrbAieBuD5" },
+    { tema:"estudo", tamanho:"curta", tipo:"sintetizada", drive:"1zEshlJ5CGyPw1U2JPEBybodrc2BiH-OC" },
+    { tema:"estudo", tamanho:"normal", tipo:"afirmativa", drive:"1n8KIJN_0RXqx47CN2Bd9eTj1jN4h3xtM" },
+    { tema:"estudo", tamanho:"normal", tipo:"interrogativa", drive:"18a8k6UTwNDrGVxTR1yECpLjEOJnOy3Sq" },
+    { tema:"estudo", tamanho:"normal", tipo:"sintetizada", drive:"1vrbs3kFHiZsDjrhv1xCGoRXdLqrq9lQO" },
+    { tema:"estudo", tamanho:"longa", tipo:"afirmativa", drive:"1FO1ebi25-ACoTM4NLm1BsMrShyVPz226" },
+    { tema:"estudo", tamanho:"longa", tipo:"interrogativa", drive:"16WFnZxog68SutdgG2-_kbgPK7diugf-J" },
+    { tema:"estudo", tamanho:"longa", tipo:"sintetizada", drive:"18ZfRPuRptbbmX3ugokWN5lmeLQNKBZn9" },
+    // --- futebol ---
+    { tema:"futebol", tamanho:"curta", tipo:"afirmativa", drive:"14mCz8SUC440sYuAMepCC10cFpwMG79su" },
+    { tema:"futebol", tamanho:"curta", tipo:"interrogativa", drive:"1OgF_hsPAyG79fec1INqhDcg9GoxiYrFa" },
+    { tema:"futebol", tamanho:"curta", tipo:"sintetizada", drive:"1PhJ4HjGVJi7Ez73P3F8mF9d8RTdE3B9U" },
+    { tema:"futebol", tamanho:"normal", tipo:"afirmativa", drive:"1-AiTc276VgR8PZwrRuJqgAf-C32bNufo" },
+    { tema:"futebol", tamanho:"normal", tipo:"interrogativa", drive:"1OOJCVrJ7I77aJOihmbOHz0_4m6ehECZt" },
+    { tema:"futebol", tamanho:"normal", tipo:"sintetizada", drive:"1--x6BmxukmVG8-qJdd4SV7FwUhO9BwR8" },
+    { tema:"futebol", tamanho:"longa", tipo:"afirmativa", drive:"1Z5bCtNgl9LOfUMdCuVvd0i8VUQ0VVuT3" },
+    { tema:"futebol", tamanho:"longa", tipo:"interrogativa", drive:"1-wxPiCFDkBn-S7IOhXDTlRDFE2vQ4RIF" },
+    { tema:"futebol", tamanho:"longa", tipo:"sintetizada", drive:"1zyobDkRc77wd0JeoUlFYUc46xUAtxyvM" },
+    // --- livro ---
+    { tema:"livro", tamanho:"curta", tipo:"afirmativa", drive:"1a_sKSbEsmuIsLS1ok9SZwnV41RRO4Jzl" },
+    { tema:"livro", tamanho:"curta", tipo:"interrogativa", drive:"16tWHt6lB-6NO-P-c5GfnYyjSDSJ_sFpW" },
+    { tema:"livro", tamanho:"curta", tipo:"sintetizada", drive:"1NDqxAq2MRrb3USR2fAGcuAF5eXOhJVJU" },
+    { tema:"livro", tamanho:"normal", tipo:"afirmativa", drive:"1UJfbat4T6Y6UpMiWPpc56RbRkuRkPxVO" },
+    { tema:"livro", tamanho:"normal", tipo:"interrogativa", drive:"1OsJnne_a0gPVg1tOd7S2pMmeT9pznzUn" },
+    { tema:"livro", tamanho:"normal", tipo:"sintetizada", drive:"1gZfIRHrddChjTPhCwzCx7sfm5C521lC2" },
+    { tema:"livro", tamanho:"longa", tipo:"afirmativa", drive:"1fuqF1Y6FRpYKMUCJWANh7POhP4ehOZFO" },
+    { tema:"livro", tamanho:"longa", tipo:"interrogativa", drive:"1bwVwYro3VAufik5z3WOEmGJQ45o4WTBI" },
+    { tema:"livro", tamanho:"longa", tipo:"sintetizada", drive:"15JNgfFV3L0pQP7w0mFbBWR9xoGacGPld" },
+    // --- passeio ---
+    { tema:"passeio", tamanho:"curta", tipo:"afirmativa", drive:"1swUEnk9U16OPpQo7LDd0cc9vrcJT8i8x" },
+    { tema:"passeio", tamanho:"curta", tipo:"interrogativa", drive:"" },   // <<< FALTA: cole o ID aqui
+    { tema:"passeio", tamanho:"curta", tipo:"sintetizada", drive:"1IEUatZfYcnRThqkCevn6eymFbK6CvDwY" },
+    { tema:"passeio", tamanho:"normal", tipo:"afirmativa", drive:"16wvvin-SDsfcAEbXvvJtUUN71SaDKEbw" },
+    { tema:"passeio", tamanho:"normal", tipo:"interrogativa", drive:"" },   // <<< FALTA: cole o ID aqui
+    { tema:"passeio", tamanho:"normal", tipo:"sintetizada", drive:"15vDgT-t-23gGECk8DcMFWhMAc0JrQWC5" },
+    { tema:"passeio", tamanho:"longa", tipo:"afirmativa", drive:"" },   // <<< FALTA: cole o ID aqui
+    { tema:"passeio", tamanho:"longa", tipo:"interrogativa", drive:"" },   // <<< FALTA: cole o ID aqui
+    { tema:"passeio", tamanho:"longa", tipo:"sintetizada", drive:"1rs8YWfxlJ3LDLBCVVhvVrCsBs5anpjea" },
+    // --- viagem ---
+    { tema:"viagem", tamanho:"curta", tipo:"afirmativa", drive:"1auSZ9qzSsjxJAqaJcskSsnW3otpCCs9h" },
+    { tema:"viagem", tamanho:"curta", tipo:"interrogativa", drive:"1zXEtQsLJPDa7rSzVtk6Vy-jSor2YvTrP" },
+    { tema:"viagem", tamanho:"curta", tipo:"sintetizada", drive:"1KV5Tq18UddmWZOo1STZRhluQ04Uz1uM5" },
+    { tema:"viagem", tamanho:"normal", tipo:"afirmativa", drive:"1P2M2yApmDRTcPHGyjKJDfqqmWQ6ucJwx" },
+    { tema:"viagem", tamanho:"normal", tipo:"interrogativa", drive:"" },   // <<< FALTA: cole o ID aqui
+    { tema:"viagem", tamanho:"normal", tipo:"sintetizada", drive:"1RoR1qeCC2iaSMigRXyqUPR9KfNvPemfz" },
+    { tema:"viagem", tamanho:"longa", tipo:"afirmativa", drive:"1loEtjdPqiCqFvFR9hcBMOzh7pZmAftrH" },
+    { tema:"viagem", tamanho:"longa", tipo:"interrogativa", drive:"17388EqpXdnPvGr56mt3U26-Pif1G-D8e" },
+    { tema:"viagem", tamanho:"longa", tipo:"sintetizada", drive:"1mfeOVGCb_HYuW6cYmHoZkMFTkK55HQRS" }
+  ],
+
+  blocoA: [], blocoB: [], blocoC: []
+};
+/* ============== fim da configuração ============== */
+
+const CORES = { A: "var(--trilha-a)", B: "var(--trilha-b)", C: "var(--trilha-c)" };
+
+const dados = {
+  participante: "P" + Date.now().toString(36).toUpperCase(),
+  inicio: new Date().toISOString(),
+  perfil: {},
+  respostas: []
+};
+
+let ordemA = [], ordemB = [], ordemC = [];
+let idxA = 0, idxB = 0, idxC = 0;
+let tTrial = 0;
+let respostaSelecionada = null;
+
+function embaralhar(arr){
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+const palco = document.getElementById("palco");
+const etiqueta = document.getElementById("etiquetaBloco");
+
+function setAccent(bloco){
+  document.documentElement.style.setProperty("--accent", CORES[bloco] || "var(--trilha-a)");
+}
+function setProgresso(){
+  const p = (id, feito, total) =>
+    document.getElementById(id).style.width = total ? (100 * feito / total) + "%" : "0%";
+  p("progA", idxA, ordemA.length || 24);
+  p("progB", idxB, CONFIG.blocoB.length);
+  p("progC", idxC, CONFIG.blocoC.length);
+}
+function iframeDrive(id){
+  return `<div class="caixa-video"><iframe src="https://drive.google.com/file/d/${id}/preview"
+    allow="autoplay; fullscreen" title="Vídeo do estudo"></iframe></div>`;
+}
+function mostrarAviso(msg){
+  const el = document.getElementById("aviso");
+  if (el){ el.textContent = msg; el.classList.add("visivel"); }
+}
+
+/* ---------------- TELA 1: TCLE ---------------- */
+function telaTCLE(){
+  etiqueta.textContent = "Consentimento";
+  setAccent("A");
+  palco.innerHTML = `
+  <div class="cartao">
+    <h2>Termo de Consentimento Livre e Esclarecido</h2>
+    ${CONFIG.tcleVideoDrive ? `<span class="rotulo-video">TCLE em Libras</span>` + iframeDrive(CONFIG.tcleVideoDrive) : ""}
+    <div class="tcle-texto">
+      <p><strong>Título da pesquisa:</strong> [Título completo do projeto conforme
+      submetido à Plataforma Brasil]</p>
+      <p><strong>Pesquisador responsável:</strong> Juliano Bezerra —
+      Faculdade de Engenharia Elétrica e de Computação (FEEC), Unicamp.
+      Contato: [e-mail institucional] / [telefone].<br>
+      <strong>Orientador:</strong> Prof. Dr. José Mario De Martino — FEEC/Unicamp.<br>
+      <strong>CAAE:</strong> [preencher após aprovação do CEP]</p>
+
+      <p><strong>1. Justificativa e objetivos.</strong> Esta pesquisa estuda como
+      um avatar sinalizante (personagem virtual) expressa diferentes tipos de
+      sentença em Libras, como afirmações e perguntas. Seu objetivo é avaliar
+      se as sentenças produzidas pelo avatar são compreendidas corretamente
+      por pessoas que usam Libras.</p>
+
+      <p><strong>2. Procedimentos.</strong> Se você aceitar participar, verá
+      vídeos curtos de um avatar sinalizando sentenças em Libras. Para cada
+      vídeo, você indicará o tipo de sentença que percebeu. Você pode assistir
+      a cada vídeo quantas vezes quiser. A participação dura cerca de
+      [XX] minutos e é feita neste próprio dispositivo.</p>
+
+      <p><strong>3. Desconfortos e riscos.</strong> Os riscos são mínimos,
+      limitados a possível cansaço visual ou desconforto ao responder. Você
+      pode pausar ou interromper a participação a qualquer momento, sem
+      qualquer prejuízo ou necessidade de justificativa.</p>
+
+      <p><strong>4. Benefícios.</strong> Não há benefício direto ao
+      participante. Os resultados contribuirão para melhorar tecnologias de
+      tradução automática para Libras, com potencial benefício à comunidade
+      surda.</p>
+
+      <p><strong>5. Sigilo e privacidade.</strong> Nenhum dado que identifique
+      você será coletado (nome, imagem ou documento). As respostas são
+      registradas com um código de participante e ficam armazenadas em um
+      arquivo que você mesmo(a) enviará ao pesquisador ao final. Os dados
+      serão usados exclusivamente para fins científicos e apresentados apenas
+      de forma agrupada.</p>
+
+      <p><strong>6. Voluntariedade.</strong> Sua participação é voluntária.
+      A recusa ou desistência, em qualquer momento, não trará qualquer
+      penalidade ou prejuízo.</p>
+
+      <p><strong>7. Ressarcimento e indenização.</strong> A participação não
+      envolve despesas nem remuneração. Em caso de dano decorrente da
+      pesquisa, você tem direito a buscar indenização, conforme a legislação
+      vigente.</p>
+
+      <p><strong>8. Contato com o Comitê de Ética em Pesquisa (CEP).</strong>
+      Em caso de dúvidas éticas ou denúncias, você pode contatar o
+      CEP-Unicamp: [endereço, telefone e e-mail atualizados do CEP —
+      confirmar na secretaria antes de aplicar].</p>
+
+      <p>Este termo segue a Resolução CNS nº 466/2012. Ao marcar a opção
+      abaixo, você declara ter compreendido as informações e concorda em
+      participar. Recomendamos que você baixe uma cópia deste termo.</p>
+    </div>
+    <button class="btn-secundario" id="btnCopiaTcle">Baixar cópia do termo (.txt)</button>
+    <div class="caixa-aceite">
+      <input type="checkbox" id="aceite">
+      <span>Li e compreendi as informações acima e <strong>aceito participar</strong>
+      voluntariamente desta pesquisa.</span>
+    </div>
+    <button class="btn-principal" id="btnTcle" disabled>Iniciar</button>
+  </div>`;
+  const chk = document.getElementById("aceite");
+  const btn = document.getElementById("btnTcle");
+  chk.addEventListener("change", () => btn.disabled = !chk.checked);
+  btn.addEventListener("click", () => {
+    dados.tcleAceite = new Date().toISOString();
+    telaPerfil();
+  });
+  document.getElementById("btnCopiaTcle").addEventListener("click", () => {
+    const texto = document.querySelector(".tcle-texto").innerText;
+    baixarArquivo("TCLE_pesquisa_libras.txt", texto, "text/plain;charset=utf-8");
+  });
+}
+
+/* ---------------- TELA 2: PERFIL ---------------- */
+function telaPerfil(){
+  etiqueta.textContent = "Sobre você";
+  palco.innerHTML = `
+  <div class="cartao">
+    <h2>Antes de começar</h2>
+    <p>Estas informações são usadas apenas para caracterizar o grupo de
+    participantes. Nenhuma delas identifica você.</p>
+    <div class="campo">
+      <label for="idade">Idade</label>
+      <input type="number" id="idade" min="18" max="120" inputmode="numeric">
+    </div>
+    <div class="campo">
+      <label for="perfilLing">Você é:</label>
+      <select id="perfilLing">
+        <option value="">Selecione…</option>
+        <option>Surdo(a)</option>
+        <option>Ouvinte</option>
+        <option>Prefiro não informar</option>
+      </select>
+    </div>
+    <div class="campo">
+      <label for="fluencia">Seu contato com a Libras:</label>
+      <select id="fluencia">
+        <option value="">Selecione…</option>
+        <option>Libras é minha primeira língua</option>
+        <option>Uso Libras com fluência</option>
+        <option>Uso Libras em nível intermediário</option>
+        <option>Uso Libras em nível básico</option>
+      </select>
+    </div>
+    <div class="aviso" id="aviso"></div>
+    <button class="btn-principal" id="btnPerfil">Continuar</button>
+  </div>`;
+  document.getElementById("btnPerfil").addEventListener("click", () => {
+    const idade = document.getElementById("idade").value.trim();
+    const perfil = document.getElementById("perfilLing").value;
+    const flu = document.getElementById("fluencia").value;
+    if (!idade || !perfil || !flu){
+      mostrarAviso("Preencha todos os campos para continuar.");
+      return;
+    }
+    dados.perfil = { idade, perfil, fluencia: flu };
+    telaInstrucoes("A");
+  });
+}
+
+/* ---------------- INSTRUÇÕES DE BLOCO ---------------- */
+const TEXTOS_INSTRUCAO = {
+  A: {
+    titulo: "Bloco 1 — Que tipo de sentença é esta?",
+    corpo: `Você verá vídeos de um avatar sinalizando sentenças em Libras.
+      Para cada vídeo você responde três coisas: <strong>sobre o que</strong> é a
+      frase, se ela é <strong>afirmativa ou interrogativa</strong>, e o quanto a
+      sinalização <strong>pareceu natural</strong>. Pode assistir ao vídeo quantas
+      vezes quiser antes de responder. Não há resposta certa na escala de
+      naturalidade: queremos a sua percepção.`
+  },
+  B: {
+    titulo: "Bloco 2 — O que foi sinalizado?",
+    corpo: `Agora, para cada vídeo, escreva em português o que você entendeu
+      que o avatar sinalizou. Não se preocupe com a forma exata da frase:
+      escreva o conteúdo que você compreendeu.`
+  },
+  C: {
+    titulo: "Bloco 3 — Qual parece mais natural?",
+    corpo: `Você verá <strong>dois vídeos</strong> da mesma sentença, lado a lado.
+      Assista aos dois e escolha qual deles parece <strong>mais natural</strong>
+      para você. Não há resposta certa: queremos sua percepção.`
+  }
+};
+
+function telaInstrucoes(bloco){
+  setAccent(bloco);
+  etiqueta.textContent = "Bloco " + ({A:1,B:2,C:3}[bloco]);
+  const t = TEXTOS_INSTRUCAO[bloco];
+  palco.innerHTML = `
+  <div class="cartao">
+    <h2><span class="num">${({A:1,B:2,C:3}[bloco])}.</span> ${t.titulo.split("— ")[1]}</h2>
+    <p class="forte">${t.corpo}</p>
+    <button class="btn-principal" id="btnIr">Começar o bloco</button>
+  </div>`;
+  document.getElementById("btnIr").addEventListener("click", () => {
+    if (bloco === "A"){
+      ordemA = montarVersao(); idxA = 0; trialA();
+    }
+    if (bloco === "B"){ ordemB = embaralhar(CONFIG.blocoB); idxB = 0; trialB(); }
+    if (bloco === "C"){
+      ordemC = embaralhar(CONFIG.blocoC).map(item => ({
+        ...item, invertido: Math.random() < 0.5
+      }));
+      idxC = 0; trialC();
+    }
+  });
+}
+
+/* -------- quadrado latino: 24 frases x 3 condicoes, 3 versoes --------
+   Frase i (0..23) recebe a condicao (i + deslocamento) % 3, onde o
+   deslocamento vem da versao. Cada versao aplica cada frase uma unica
+   vez, com 8 itens por condicao. -------------------------------------- */
+const CONDICOES = ["afirmativa", "interrogativa", "sintetizada"];
+
+function montarVersao(){
+  const desloc = { A: 0, B: 1, C: 2 }[CONFIG.versao] || 0;
+  const frases = [];
+  CONFIG.temas.forEach(tema => CONFIG.tamanhos.forEach(tam => frases.push([tema, tam])));
+  const itens = [];
+  frases.forEach(([tema, tam], i) => {
+    const tipo = CONDICOES[(i + desloc) % 3];
+    const v = CONFIG.catalogo.find(x => x.tema === tema && x.tamanho === tam && x.tipo === tipo);
+    if (v && v.drive) itens.push({ ...v, codigo: tema + "_" + tam + "_" + tipo });
+    else console.warn("Sem ID no catálogo, item pulado:", tema, tam, tipo);
+  });
+  const lista = embaralhar(itens);
+  return CONFIG.limiteVideos > 0 ? lista.slice(0, CONFIG.limiteVideos) : lista;
+}
+
+// gabarito da identificação: a sintetizada nasce de uma afirmativa
+// transformada, e o alvo perceptual dela é a interrogativa.
+function gabaritoTipo(tipo){
+  return tipo === "afirmativa" ? "Afirmativa" : "Interrogativa";
+}
+
+// 4 alternativas de tema: a correta e 3 distratoras
+function alternativasTema(correto){
+  const outros = embaralhar(CONFIG.temas.filter(t => t !== correto)).slice(0, 3);
+  return embaralhar([correto, ...outros]);
+}
+
+/* ---------------- BLOCO A ---------------- */
+function trialA(){
+  if (idxA >= ordemA.length){ setProgresso(); proximoBloco("A"); return; }
+  const item = ordemA[idxA];
+  const opTema = alternativasTema(item.tema);
+  let respTema = null, respTipo = null, respNat = null;
+  tTrial = performance.now();
+  setProgresso();
+  palco.innerHTML = `
+  <div class="cartao">
+    <span class="contador">Vídeo ${idxA + 1} de ${ordemA.length}</span>
+    ${iframeDrive(item.drive)}
+
+    <p class="forte">1. Sobre o que fala esta frase?</p>
+    <div class="opcoes linha" id="opsTema"></div>
+
+    <p class="forte">2. Esta sentença é:</p>
+    <div class="opcoes linha" id="opsTipo"></div>
+
+    <p class="forte">3. O quanto essa sinalização pareceu natural?</p>
+    <div class="escala" id="opsNat"></div>
+    <div class="escala-pontas"><span>1 — nada natural</span><span>5 — muito natural</span></div>
+
+    <div class="aviso" id="aviso"></div>
+    <button class="btn-principal" id="btnProx">Próximo vídeo</button>
+  </div>`;
+
+  function grupo(container, valores, rotulo, aoEscolher){
+    const el = document.getElementById(container);
+    valores.forEach(v => {
+      const b = document.createElement("button");
+      b.className = container === "opsNat" ? "" : "btn-opcao";
+      b.textContent = rotulo(v);
+      b.addEventListener("click", () => {
+        aoEscolher(v);
+        el.querySelectorAll("button").forEach(x => x.classList.remove("marcado"));
+        b.classList.add("marcado");
+      });
+      el.appendChild(b);
+    });
+  }
+
+  grupo("opsTema", opTema, v => v.charAt(0).toUpperCase() + v.slice(1), v => respTema = v);
+  grupo("opsTipo", CONFIG.opcoesBlocoA || ["Afirmativa","Interrogativa"], v => v, v => respTipo = v);
+  grupo("opsNat", [1,2,3,4,5], v => String(v), v => respNat = v);
+
+  document.getElementById("btnProx").addEventListener("click", () => {
+    if (!respTema){ mostrarAviso("Escolha o tema da frase antes de continuar."); return; }
+    if (!respTipo){ mostrarAviso("Indique se a sentença é afirmativa ou interrogativa."); return; }
+    if (!respNat){ mostrarAviso("Marque um valor na escala de naturalidade."); return; }
+    const gab = gabaritoTipo(item.tipo);
+    registrar({
+      bloco: "A", ordem: idxA + 1, estimulo: item.codigo,
+      versao: CONFIG.versao,
+      tema: item.tema, tamanho: item.tamanho, condicao: item.tipo,
+      resposta_tema: respTema,
+      acerto_tema: respTema === item.tema ? 1 : 0,
+      resposta: respTipo,
+      gabarito: gab,
+      acertou: respTipo === gab ? 1 : 0,
+      naturalidade: respNat,
+      tempo_ms: Math.round(performance.now() - tTrial)
+    });
+    idxA++; trialA();
+  });
+}
+
+/* ---------------- BLOCO B ---------------- */
+function trialB(){
+  if (idxB >= ordemB.length){ setProgresso(); proximoBloco("B"); return; }
+  const item = ordemB[idxB];
+  tTrial = performance.now();
+  setProgresso();
+  palco.innerHTML = `
+  <div class="cartao">
+    <span class="contador">Vídeo ${idxB + 1} de ${ordemB.length}</span>
+    ${iframeDrive(item.drive)}
+    <div class="campo">
+      <label for="txtResp">O que o avatar sinalizou?</label>
+      <textarea id="txtResp" placeholder="Escreva aqui o que você entendeu…"></textarea>
+    </div>
+    <div class="aviso" id="aviso"></div>
+    <button class="btn-principal" id="btnProx">Próximo vídeo</button>
+  </div>`;
+  document.getElementById("btnProx").addEventListener("click", () => {
+    const txt = document.getElementById("txtResp").value.trim();
+    if (!txt){ mostrarAviso("Escreva sua resposta antes de continuar."); return; }
+    registrar({
+      bloco: "B", ordem: idxB + 1, estimulo: item.codigo,
+      resposta: txt,
+      tempo_ms: Math.round(performance.now() - tTrial)
+    });
+    idxB++; trialB();
+  });
+}
+
+/* ---------------- BLOCO C ---------------- */
+function trialC(){
+  if (idxC >= ordemC.length){ setProgresso(); telaFinal(); return; }
+  const item = ordemC[idxC];
+  respostaSelecionada = null;
+  tTrial = performance.now();
+  setProgresso();
+  // sorteio de lado: se invertido, video2 aparece à esquerda
+  const esq = item.invertido ? item.video2 : item.video1;
+  const dir = item.invertido ? item.video1 : item.video2;
+  palco.innerHTML = `
+  <div class="cartao">
+    <span class="contador">Par ${idxC + 1} de ${ordemC.length}</span>
+    <div class="par-videos">
+      <div><span class="rotulo-video">Vídeo 1</span>${iframeDrive(esq.drive)}</div>
+      <div><span class="rotulo-video">Vídeo 2</span>${iframeDrive(dir.drive)}</div>
+    </div>
+    <p class="forte">Qual dos dois parece mais natural?</p>
+    <div class="opcoes linha" id="ops"></div>
+    <div class="aviso" id="aviso"></div>
+    <button class="btn-principal" id="btnProx">Próximo par</button>
+  </div>`;
+  const ops = document.getElementById("ops");
+  ["Vídeo 1", "Vídeo 2"].forEach(op => {
+    const b = document.createElement("button");
+    b.className = "btn-opcao"; b.textContent = op + " é mais natural";
+    b.addEventListener("click", () => {
+      respostaSelecionada = op;
+      ops.querySelectorAll(".btn-opcao").forEach(x => x.classList.remove("marcado"));
+      b.classList.add("marcado");
+    });
+    ops.appendChild(b);
+  });
+  document.getElementById("btnProx").addEventListener("click", () => {
+    if (!respostaSelecionada){ mostrarAviso("Escolha um dos vídeos antes de continuar."); return; }
+    const escolhido = (respostaSelecionada === "Vídeo 1") ? esq : dir;
+    registrar({
+      bloco: "C", ordem: idxC + 1, estimulo: item.codigo,
+      lado_video1: item.invertido ? item.video2.origem : item.video1.origem,
+      lado_video2: item.invertido ? item.video1.origem : item.video2.origem,
+      resposta: respostaSelecionada,
+      origem_escolhida: escolhido.origem,
+      tempo_ms: Math.round(performance.now() - tTrial)
+    });
+    idxC++; trialC();
+  });
+}
+
+/* ---------------- TELA FINAL ---------------- */
+function telaFinal(){
+  etiqueta.textContent = "Concluído";
+  dados.fim = new Date().toISOString();
+  palco.innerHTML = `
+  <div class="cartao">
+    <h2>Obrigado pela participação!</h2>
+    <p class="forte" id="statusEnvio">${CONFIG.urlAppsScript
+      ? "Conferindo o envio das suas respostas…"
+      : "Falta só um passo: <strong>baixe o arquivo com suas respostas</strong> e envie para o pesquisador no e-mail abaixo. Sem esse envio, sua participação não pode ser registrada."}</p>
+    <div class="resumo-final">
+      Participante: ${dados.participante}<br>
+      Respostas registradas: ${dados.respostas.length}<br>
+      Contato do pesquisador: <strong>${CONFIG.emailPesquisador}</strong>
+    </div>
+    ${CONFIG.mostrarDownloads ? `
+    <button class="btn-principal" id="btnCSV">Baixar respostas (.csv)</button>
+    <button class="btn-secundario" id="btnJSON">Baixar cópia completa (.json)</button>` : ""}
+    ${CONFIG.modoTeste ? `<div class="resumo-final" id="painelTeste">Diagnóstico: aguardando…</div>` : ""}
+  </div>`;
+  if (CONFIG.mostrarDownloads){
+    document.getElementById("btnCSV").addEventListener("click", baixarCSV);
+    document.getElementById("btnJSON").addEventListener("click", baixarJSON);
+  }
+  if (CONFIG.modoTeste) painelDiagnostico();
+  if (CONFIG.urlAppsScript) enviarPendentes();
+}
+
+/* ---------- envio incremental para a planilha ----------
+   Cada resposta é enviada assim que o participante clica em "Próximo".
+   Se o envio falhar (queda de rede), o registro fica marcado como pendente
+   e é reenviado na tela final. O download de CSV segue como plano B. ---- */
+
+// painel visível apenas com CONFIG.modoTeste = true
+function painelDiagnostico(){
+  const el = document.getElementById("painelTeste");
+  if (!el) return;
+  setTimeout(() => {
+    const enviadas = dados.respostas.filter(r => r.enviado).length;
+    el.innerHTML =
+      "<strong>Diagnóstico (modo teste)</strong><br>" +
+      "Endpoint configurado: " + (CONFIG.urlAppsScript ? "sim" : "NÃO") + "<br>" +
+      "Respostas em memória: " + dados.respostas.length + "<br>" +
+      "Envios sem erro de rede: " + enviadas + "<br>" +
+      "Atenção: o navegador não consegue ler a resposta do Apps Script " +
+      "(modo no-cors). \"Sem erro de rede\" significa que a requisição saiu, " +
+      "não que a planilha gravou. Confira a aba da planilha.";
+    console.log("[diagnóstico] payload de exemplo:", payloadDe(dados.respostas.slice(0,1), true));
+  }, 1200);
+}
+
+function payloadDe(lista, parcial){
+  return JSON.stringify({
+    participante: dados.participante,
+    inicio: dados.inicio,
+    fim: dados.fim || "",
+    perfil: dados.perfil,
+    parcial: !!parcial,
+    respostas: lista
+  });
+}
+
+function postPlanilha(corpo){
+  return fetch(CONFIG.urlAppsScript, {
+    method: "POST",
+    mode: "no-cors",
+    keepalive: true,
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: corpo
+  });
+}
+
+// registra a resposta em memória e já dispara o envio individual
+function registrar(reg){
+  reg.id = dados.participante + "-" + reg.bloco + String(reg.ordem).padStart(2, "0");
+  reg.enviado = false;
+  dados.respostas.push(reg);
+  if (!CONFIG.urlAppsScript) return;
+  postPlanilha(payloadDe([reg], true))
+    .then(() => { reg.enviado = true; })
+    .catch(() => { reg.enviado = false; });
+}
+
+// na tela final, reenvia o que por acaso não subiu
+function enviarPendentes(){
+  const st = document.getElementById("statusEnvio");
+  const pendentes = dados.respostas.filter(r => !r.enviado);
+  if (!pendentes.length){
+    st.innerHTML = "✔ Suas respostas foram enviadas. Se quiser, baixe uma cópia abaixo.";
+    return;
+  }
+  postPlanilha(payloadDe(pendentes, false)).then(() => {
+    pendentes.forEach(r => r.enviado = true);
+    st.innerHTML = "✔ Suas respostas foram enviadas. Se quiser, baixe uma cópia abaixo.";
+  }).catch(() => {
+    st.innerHTML = "Não foi possível enviar automaticamente. Por favor, <strong>baixe o arquivo abaixo</strong> e envie para o e-mail do pesquisador.";
+  });
+}
+
+function baixarArquivo(nome, conteudo, tipo){
+  const blob = new Blob([conteudo], { type: tipo });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = nome;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(a.href);
+}
+
+function campoCSV(v){
+  if (v === undefined || v === null) return "";
+  const s = String(v).replace(/"/g, '""');
+  return /[",\n;]/.test(s) ? `"${s}"` : s;
+}
+
+function baixarCSV(){
+  const cab = ["id","participante","versao","idade","perfil","fluencia","ordem",
+    "estimulo","tema","tamanho","condicao","resposta_tema","acerto_tema",
+    "resposta","gabarito","acertou","naturalidade","tempo_ms"];
+  const linhas = dados.respostas.map(r => [
+    r.id, dados.participante, r.versao, dados.perfil.idade, dados.perfil.perfil,
+    dados.perfil.fluencia, r.ordem, r.estimulo, r.tema, r.tamanho, r.condicao,
+    r.resposta_tema, r.acerto_tema, r.resposta, r.gabarito, r.acertou,
+    r.naturalidade, r.tempo_ms
+  ].map(campoCSV).join(","));
+  const csv = "\uFEFF" + cab.join(",") + "\n" + linhas.join("\n");
+  baixarArquivo(`respostas_${dados.participante}.csv`, csv, "text/csv;charset=utf-8");
+}
+
+function baixarJSON(){
+  baixarArquivo(`respostas_${dados.participante}.json`,
+    JSON.stringify(dados, null, 2), "application/json");
+}
+
+/* ---------------- blocos vazios são pulados ---------------- */
+function proximoBloco(atual){
+  if (atual === "A"){
+    if (CONFIG.blocoB.length) telaInstrucoes("B");
+    else if (CONFIG.blocoC.length) telaInstrucoes("C");
+    else telaFinal();
+    return;
+  }
+  if (atual === "B"){
+    if (CONFIG.blocoC.length) telaInstrucoes("C");
+    else telaFinal();
+  }
+}
+
+/* ---------------- início ---------------- */
+if (!CONFIG.blocoB.length) document.getElementById("progB").closest(".seg").style.display = "none";
+if (!CONFIG.blocoC.length) document.getElementById("progC").closest(".seg").style.display = "none";
+setProgresso();
+telaTCLE();
+</script>
+</body>
+</html>
