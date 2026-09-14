@@ -285,20 +285,20 @@ const CONFIG = {
     { tema:"livro", tamanho:"longa", tipo:"sintetizada", drive:"15JNgfFV3L0pQP7w0mFbBWR9xoGacGPld" },
     // --- passeio ---
     { tema:"passeio", tamanho:"curta", tipo:"afirmativa", drive:"1swUEnk9U16OPpQo7LDd0cc9vrcJT8i8x" },
-    { tema:"passeio", tamanho:"curta", tipo:"interrogativa", drive:"" },   // <<< FALTA: cole o ID aqui
+    { tema:"passeio", tamanho:"curta", tipo:"interrogativa", drive:"1puelDFFvPMGLpIor7L_J1u7e61hhtonV" },
     { tema:"passeio", tamanho:"curta", tipo:"sintetizada", drive:"1IEUatZfYcnRThqkCevn6eymFbK6CvDwY" },
     { tema:"passeio", tamanho:"normal", tipo:"afirmativa", drive:"16wvvin-SDsfcAEbXvvJtUUN71SaDKEbw" },
-    { tema:"passeio", tamanho:"normal", tipo:"interrogativa", drive:"" },   // <<< FALTA: cole o ID aqui
+    { tema:"passeio", tamanho:"normal", tipo:"interrogativa", drive:"1qgowNgACW_ZPcw4O201R5B2UuSpltax4" },
     { tema:"passeio", tamanho:"normal", tipo:"sintetizada", drive:"15vDgT-t-23gGECk8DcMFWhMAc0JrQWC5" },
-    { tema:"passeio", tamanho:"longa", tipo:"afirmativa", drive:"" },   // <<< FALTA: cole o ID aqui
-    { tema:"passeio", tamanho:"longa", tipo:"interrogativa", drive:"" },   // <<< FALTA: cole o ID aqui
+    { tema:"passeio", tamanho:"longa", tipo:"afirmativa", drive:"1KRqGif-XSkef8CHk0st2FaEJa_fmLfNi" },
+    { tema:"passeio", tamanho:"longa", tipo:"interrogativa", drive:"1GjegQ35lzEh3M6P58N8JpT2ezwV-hJWv" },
     { tema:"passeio", tamanho:"longa", tipo:"sintetizada", drive:"1rs8YWfxlJ3LDLBCVVhvVrCsBs5anpjea" },
     // --- viagem ---
     { tema:"viagem", tamanho:"curta", tipo:"afirmativa", drive:"1auSZ9qzSsjxJAqaJcskSsnW3otpCCs9h" },
     { tema:"viagem", tamanho:"curta", tipo:"interrogativa", drive:"1zXEtQsLJPDa7rSzVtk6Vy-jSor2YvTrP" },
     { tema:"viagem", tamanho:"curta", tipo:"sintetizada", drive:"1KV5Tq18UddmWZOo1STZRhluQ04Uz1uM5" },
     { tema:"viagem", tamanho:"normal", tipo:"afirmativa", drive:"1P2M2yApmDRTcPHGyjKJDfqqmWQ6ucJwx" },
-    { tema:"viagem", tamanho:"normal", tipo:"interrogativa", drive:"" },   // <<< FALTA: cole o ID aqui
+    { tema:"viagem", tamanho:"normal", tipo:"interrogativa", drive:"1Atdmbc_l1hdBoXYU1s0pmAnQsnPHc8cP" },
     { tema:"viagem", tamanho:"normal", tipo:"sintetizada", drive:"1RoR1qeCC2iaSMigRXyqUPR9KfNvPemfz" },
     { tema:"viagem", tamanho:"longa", tipo:"afirmativa", drive:"1loEtjdPqiCqFvFR9hcBMOzh7pZmAftrH" },
     { tema:"viagem", tamanho:"longa", tipo:"interrogativa", drive:"17388EqpXdnPvGr56mt3U26-Pif1G-D8e" },
@@ -737,7 +737,7 @@ function telaFinal(){
     document.getElementById("btnJSON").addEventListener("click", baixarJSON);
   }
   if (CONFIG.modoTeste) painelDiagnostico();
-  if (CONFIG.urlAppsScript) enviarPendentes();
+  if (CONFIG.urlAppsScript) setTimeout(enviarPendentes, 2500);
 }
 
 /* ---------- envio incremental para a planilha ----------
@@ -786,18 +786,22 @@ function postPlanilha(corpo){
 
 // registra a resposta em memória e já dispara o envio individual
 function registrar(reg){
+  reg.inicio = dados.inicio;
   reg.id = dados.participante + "-" + reg.bloco + String(reg.ordem).padStart(2, "0");
   reg.enviado = false;
   dados.respostas.push(reg);
   if (!CONFIG.urlAppsScript) return;
-  postPlanilha(payloadDe([reg], true))
+  // guarda a promessa: a tela final espera os envios em voo terminarem antes
+  // de decidir o que reenviar, senão o último item era enviado duas vezes.
+  reg._envio = postPlanilha(payloadDe([reg], true))
     .then(() => { reg.enviado = true; })
     .catch(() => { reg.enviado = false; });
 }
 
 // na tela final, reenvia o que por acaso não subiu
-function enviarPendentes(){
+async function enviarPendentes(){
   const st = document.getElementById("statusEnvio");
+  await Promise.allSettled(dados.respostas.map(r => r._envio).filter(Boolean));
   const pendentes = dados.respostas.filter(r => !r.enviado);
   if (!pendentes.length){
     st.innerHTML = "✔ Suas respostas foram enviadas. Se quiser, baixe uma cópia abaixo.";
