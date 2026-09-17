@@ -305,6 +305,23 @@ const CONFIG = {
     { tema:"viagem", tamanho:"longa", tipo:"sintetizada", drive:"1mfeOVGCb_HYuW6cYmHoZkMFTkK55HQRS" }
   ],
 
+
+  // BLOCO 2 — comparação pareada dentro do mesmo vídeo.
+  // Cada vídeo mostra a afirmativa de um lado e a sintetizada do outro.
+  // "gabarito" é o lado em que está a SINTETIZADA (a que deve ser lida
+  // como interrogativa). 3 vídeos por versão.
+  comparacoes: [
+    { codigo:"compara_1", drive:"1292W3b6pOa5ShGkNqrG98Q1iXr6b7mlD", gabarito:"Direita", versao:"A" },
+    { codigo:"compara_2", drive:"1AMcDwX2wUzVTb1UeLEuYmw5LLWMQeONs", gabarito:"Esquerda", versao:"A" },
+    { codigo:"compara_3", drive:"10UJyUVGjlGmWWfHpSv8XiA1Tu-d5xDXN", gabarito:"Direita", versao:"A" },
+    { codigo:"compara_4", drive:"1claLoeLeP2hVIMxAHqvn4wTD6BffV_JD", gabarito:"Direita", versao:"B" },
+    { codigo:"compara_5", drive:"1is035yS44RnyXWkolcLTpHst8vCr99as", gabarito:"Esquerda", versao:"B" },
+    { codigo:"compara_6", drive:"1J7wV5m4NC82oqZGnW5QAbLDm7_L08VGQ", gabarito:"Direita", versao:"B" },
+    { codigo:"compara_7", drive:"1z3eOM2nyBwaoynzGXV7nkdgvvsAn1w0-", gabarito:"Esquerda", versao:"C" },
+    { codigo:"compara_8", drive:"1YjCBXx-LdislBbYtFuJktnPK0K6dwyOp", gabarito:"Esquerda", versao:"C" },
+    { codigo:"compara_9", drive:"1QbkkrXM5dsC0ZHaXIMUSfm8cG4FlwWdn", gabarito:"Direita", versao:"C" }
+  ],
+
   blocoA: [], blocoB: [], blocoC: []
 };
 /* ============== fim da configuração ============== */
@@ -342,7 +359,7 @@ function setProgresso(){
   const p = (id, feito, total) =>
     document.getElementById(id).style.width = total ? (100 * feito / total) + "%" : "0%";
   p("progA", idxA, ordemA.length || 24);
-  p("progB", idxB, CONFIG.blocoB.length);
+  p("progB", idxB, ordemB.length || comparacoesDaVersao().length);
   p("progC", idxC, CONFIG.blocoC.length);
 }
 function iframeDrive(id){
@@ -498,10 +515,11 @@ const TEXTOS_INSTRUCAO = {
       naturalidade: queremos a sua percepção.`
   },
   B: {
-    titulo: "Bloco 2 — O que foi sinalizado?",
-    corpo: `Agora, para cada vídeo, escreva em português o que você entendeu
-      que o avatar sinalizou. Não se preocupe com a forma exata da frase:
-      escreva o conteúdo que você compreendeu.`
+    titulo: "Bloco 2 — Qual delas é a pergunta?",
+    corpo: `Agora você verá <strong>dois avatares lado a lado no mesmo vídeo</strong>,
+      sinalizando a mesma frase. Um deles está fazendo uma <strong>afirmação</strong>
+      e o outro uma <strong>pergunta</strong>. Sua tarefa é dizer qual dos dois
+      está perguntando. Pode assistir quantas vezes quiser.`
   },
   C: {
     titulo: "Bloco 3 — Qual parece mais natural?",
@@ -525,7 +543,7 @@ function telaInstrucoes(bloco){
     if (bloco === "A"){
       ordemA = montarVersao(); idxA = 0; trialA();
     }
-    if (bloco === "B"){ ordemB = embaralhar(CONFIG.blocoB); idxB = 0; trialB(); }
+    if (bloco === "B"){ ordemB = embaralhar(comparacoesDaVersao()); idxB = 0; trialB(); }
     if (bloco === "C"){
       ordemC = embaralhar(CONFIG.blocoC).map(item => ({
         ...item, invertido: Math.random() < 0.5
@@ -540,6 +558,10 @@ function telaInstrucoes(bloco){
    deslocamento vem da versao. Cada versao aplica cada frase uma unica
    vez, com 8 itens por condicao. -------------------------------------- */
 const CONDICOES = ["afirmativa", "interrogativa", "sintetizada"];
+
+function comparacoesDaVersao(){
+  return (CONFIG.comparacoes || []).filter(c => c.versao === CONFIG.versao && c.drive);
+}
 
 function montarVersao(){
   const desloc = { A: 0, B: 1, C: 2 }[CONFIG.versao] || 0;
@@ -639,25 +661,38 @@ function trialA(){
 function trialB(){
   if (idxB >= ordemB.length){ setProgresso(); proximoBloco("B"); return; }
   const item = ordemB[idxB];
+  let resp = null;
   tTrial = performance.now();
   setProgresso();
   palco.innerHTML = `
   <div class="cartao">
-    <span class="contador">Vídeo ${idxB + 1} de ${ordemB.length}</span>
+    <span class="contador">Comparação ${idxB + 1} de ${ordemB.length}</span>
     ${iframeDrive(item.drive)}
-    <div class="campo">
-      <label for="txtResp">O que o avatar sinalizou?</label>
-      <textarea id="txtResp" placeholder="Escreva aqui o que você entendeu…"></textarea>
-    </div>
+    <p class="forte">Qual das duas frases é a <strong>pergunta</strong>?</p>
+    <div class="opcoes linha" id="opsLado"></div>
     <div class="aviso" id="aviso"></div>
-    <button class="btn-principal" id="btnProx">Próximo vídeo</button>
+    <button class="btn-principal" id="btnProx">Próxima comparação</button>
   </div>`;
+  const el = document.getElementById("opsLado");
+  ["Esquerda", "Direita"].forEach(lado => {
+    const b = document.createElement("button");
+    b.className = "btn-opcao"; b.textContent = lado;
+    b.addEventListener("click", () => {
+      resp = lado;
+      el.querySelectorAll(".btn-opcao").forEach(x => x.classList.remove("marcado"));
+      b.classList.add("marcado");
+    });
+    el.appendChild(b);
+  });
   document.getElementById("btnProx").addEventListener("click", () => {
-    const txt = document.getElementById("txtResp").value.trim();
-    if (!txt){ mostrarAviso("Escreva sua resposta antes de continuar."); return; }
+    if (!resp){ mostrarAviso("Escolha Esquerda ou Direita antes de continuar."); return; }
     registrar({
       bloco: "B", ordem: idxB + 1, estimulo: item.codigo,
-      resposta: txt,
+      versao: CONFIG.versao,
+      condicao: "comparacao",
+      resposta: resp,
+      gabarito: item.gabarito,
+      acertou: resp === item.gabarito ? 1 : 0,
       tempo_ms: Math.round(performance.now() - tTrial)
     });
     idxB++; trialB();
@@ -833,11 +868,11 @@ function campoCSV(v){
 }
 
 function baixarCSV(){
-  const cab = ["id","participante","versao","idade","perfil","fluencia","ordem",
+  const cab = ["id","participante","versao","bloco","idade","perfil","fluencia","ordem",
     "estimulo","tema","tamanho","condicao","resposta_tema","acerto_tema",
     "resposta","gabarito","acertou","naturalidade","tempo_ms"];
   const linhas = dados.respostas.map(r => [
-    r.id, dados.participante, r.versao, dados.perfil.idade, dados.perfil.perfil,
+    r.id, dados.participante, r.versao, r.bloco, dados.perfil.idade, dados.perfil.perfil,
     dados.perfil.fluencia, r.ordem, r.estimulo, r.tema, r.tamanho, r.condicao,
     r.resposta_tema, r.acerto_tema, r.resposta, r.gabarito, r.acertou,
     r.naturalidade, r.tempo_ms
@@ -854,7 +889,7 @@ function baixarJSON(){
 /* ---------------- blocos vazios são pulados ---------------- */
 function proximoBloco(atual){
   if (atual === "A"){
-    if (CONFIG.blocoB.length) telaInstrucoes("B");
+    if (comparacoesDaVersao().length) telaInstrucoes("B");
     else if (CONFIG.blocoC.length) telaInstrucoes("C");
     else telaFinal();
     return;
@@ -866,7 +901,7 @@ function proximoBloco(atual){
 }
 
 /* ---------------- início ---------------- */
-if (!CONFIG.blocoB.length) document.getElementById("progB").closest(".seg").style.display = "none";
+if (!comparacoesDaVersao().length) document.getElementById("progB").closest(".seg").style.display = "none";
 if (!CONFIG.blocoC.length) document.getElementById("progC").closest(".seg").style.display = "none";
 setProgresso();
 telaTCLE();
