@@ -508,8 +508,8 @@ const TEXTOS_INSTRUCAO = {
   A: {
     titulo: "Bloco 1 — Que tipo de sentença é esta?",
     corpo: `Você verá vídeos de um avatar sinalizando sentenças em Libras.
-      Para cada vídeo você responde três coisas: <strong>sobre o que</strong> é a
-      frase, se ela é <strong>afirmativa ou interrogativa</strong>, e o quanto a
+      Para cada vídeo você responde duas coisas: se a frase é
+      <strong>afirmativa ou interrogativa</strong>, e o quanto a
       sinalização <strong>pareceu natural</strong>. Pode assistir ao vídeo quantas
       vezes quiser antes de responder. Não há resposta certa na escala de
       naturalidade: queremos a sua percepção.`
@@ -596,8 +596,7 @@ function alternativasTema(correto){
 function trialA(){
   if (idxA >= ordemA.length){ setProgresso(); proximoBloco("A"); return; }
   const item = ordemA[idxA];
-  const opTema = alternativasTema(item.tema);
-  let respTema = null, respTipo = null, respNat = null;
+  let respTipo = null, respNat = null;
   tTrial = performance.now();
   setProgresso();
   palco.innerHTML = `
@@ -605,13 +604,10 @@ function trialA(){
     <span class="contador">Vídeo ${idxA + 1} de ${ordemA.length}</span>
     ${iframeDrive(item.drive)}
 
-    <p class="forte">1. Sobre o que fala esta frase?</p>
-    <div class="opcoes linha" id="opsTema"></div>
-
-    <p class="forte">2. Esta sentença é:</p>
+    <p class="forte">1. Esta sentença é:</p>
     <div class="opcoes linha" id="opsTipo"></div>
 
-    <p class="forte">3. O quanto essa sinalização pareceu natural?</p>
+    <p class="forte">2. O quanto essa sinalização pareceu natural?</p>
     <div class="escala" id="opsNat"></div>
     <div class="escala-pontas"><span>1 — nada natural</span><span>5 — muito natural</span></div>
 
@@ -634,12 +630,10 @@ function trialA(){
     });
   }
 
-  grupo("opsTema", opTema, v => v.charAt(0).toUpperCase() + v.slice(1), v => respTema = v);
   grupo("opsTipo", CONFIG.opcoesBlocoA || ["Afirmativa","Interrogativa"], v => v, v => respTipo = v);
   grupo("opsNat", [1,2,3,4,5], v => String(v), v => respNat = v);
 
   document.getElementById("btnProx").addEventListener("click", () => {
-    if (!respTema){ mostrarAviso("Escolha o tema da frase antes de continuar."); return; }
     if (!respTipo){ mostrarAviso("Indique se a sentença é afirmativa ou interrogativa."); return; }
     if (!respNat){ mostrarAviso("Marque um valor na escala de naturalidade."); return; }
     const gab = gabaritoTipo(item.tipo);
@@ -647,8 +641,6 @@ function trialA(){
       bloco: "A", ordem: idxA + 1, estimulo: item.codigo,
       versao: CONFIG.versao,
       tema: item.tema, tamanho: item.tamanho, condicao: item.tipo,
-      resposta_tema: respTema,
-      acerto_tema: respTema === item.tema ? 1 : 0,
       resposta: respTipo,
       gabarito: gab,
       acertou: respTipo === gab ? 1 : 0,
@@ -871,12 +863,12 @@ function campoCSV(v){
 
 function baixarCSV(){
   const cab = ["id","participante","versao","bloco","idade","perfil","fluencia","ordem",
-    "estimulo","tema","tamanho","condicao","resposta_tema","acerto_tema",
+    "estimulo","tema","tamanho","condicao",
     "resposta","gabarito","acertou","naturalidade","tempo_ms"];
   const linhas = dados.respostas.map(r => [
     r.id, dados.participante, r.versao, r.bloco, dados.perfil.idade, dados.perfil.perfil,
     dados.perfil.fluencia, r.ordem, r.estimulo, r.tema, r.tamanho, r.condicao,
-    r.resposta_tema, r.acerto_tema, r.resposta, r.gabarito, r.acertou,
+    r.resposta, r.gabarito, r.acertou,
     r.naturalidade, r.tempo_ms
   ].map(campoCSV).join(","));
   const csv = "\uFEFF" + cab.join(",") + "\n" + linhas.join("\n");
