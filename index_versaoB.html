@@ -554,7 +554,7 @@ function telaInstrucoes(bloco){
 }
 
 /* -------- quadrado latino: 24 frases x 3 condicoes, 3 versoes --------
-   Frase i (0..23) recebe a condicao (i + deslocamento) % 3, onde o
+   Frase (tema t, tamanho s) recebe a condicao (t + s + deslocamento) % 3, onde o
    deslocamento vem da versao. Cada versao aplica cada frase uma unica
    vez, com 8 itens por condicao. -------------------------------------- */
 const CONDICOES = ["afirmativa", "interrogativa", "sintetizada"];
@@ -566,10 +566,12 @@ function comparacoesDaVersao(){
 function montarVersao(){
   const desloc = { A: 0, B: 1, C: 2 }[CONFIG.versao] || 0;
   const frases = [];
-  CONFIG.temas.forEach(tema => CONFIG.tamanhos.forEach(tam => frases.push([tema, tam])));
+  CONFIG.temas.forEach((tema, ti) => CONFIG.tamanhos.forEach((tam, si) => frases.push([tema, tam, ti, si])));
   const itens = [];
-  frases.forEach(([tema, tam], i) => {
-    const tipo = CONDICOES[(i + desloc) % 3];
+  frases.forEach(([tema, tam, ti, si]) => {
+    // condição = (tema + tamanho + versão) mod 3: dentro de cada versão,
+    // cada tamanho mistura as três condições (não há pista pelo tamanho)
+    const tipo = CONDICOES[(ti + si + desloc) % 3];
     const v = CONFIG.catalogo.find(x => x.tema === tema && x.tamanho === tam && x.tipo === tipo);
     if (v && v.drive) itens.push({ ...v, codigo: tema + "_" + tam + "_" + tipo });
     else console.warn("Sem ID no catálogo, item pulado:", tema, tam, tipo);
